@@ -87,7 +87,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.study != nil {
 			a.study.SetSize(msg.Width, msg.Height)
 		}
-		// TODO: Update other models
+		if a.deckManager != nil {
+			a.deckManager.SetSize(msg.Width, msg.Height)
+		}
+		if a.cardEditor != nil {
+			a.cardEditor.SetSize(msg.Width, msg.Height)
+		}
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -119,6 +124,98 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return nil
 		})
+
+	case CreateDeckMsg:
+		// Create a new deck
+		return a, tea.Cmd(func() tea.Msg {
+			// Create new deck with proper initialization
+			newDeck := models.NewDeck(msg.Deck.Name, msg.Deck.Description)
+			if err := a.storage.SaveDeck(newDeck); err != nil {
+				return ErrorMsg{err}
+			}
+			// Reload decks to refresh the list
+			decks, err := a.storage.LoadAllDecks()
+			if err != nil {
+				return ErrorMsg{err}
+			}
+			return DecksLoadedMsg{decks}
+		})
+
+	case UpdateDeckMsg:
+		// Update existing deck
+		return a, tea.Cmd(func() tea.Msg {
+			msg.Deck.MarkModified()
+			if err := a.storage.SaveDeck(msg.Deck); err != nil {
+				return ErrorMsg{err}
+			}
+			// Reload decks to refresh the list
+			decks, err := a.storage.LoadAllDecks()
+			if err != nil {
+				return ErrorMsg{err}
+			}
+			return DecksLoadedMsg{decks}
+		})
+
+	case DeleteDeckMsg:
+		// Delete deck
+		return a, tea.Cmd(func() tea.Msg {
+			if err := a.storage.DeleteDeck(msg.Deck.ID); err != nil {
+				return ErrorMsg{err}
+			}
+			// Reload decks to refresh the list
+			decks, err := a.storage.LoadAllDecks()
+			if err != nil {
+				return ErrorMsg{err}
+			}
+			return DecksLoadedMsg{decks}
+		})
+
+	case CreateCardMsg:
+		// Create a new card
+		return a, tea.Cmd(func() tea.Msg {
+			// Create new card with proper initialization
+			newCard := models.NewCard(msg.Card.Front, msg.Card.Back)
+			msg.Deck.AddCard(newCard)
+			if err := a.storage.SaveDeck(msg.Deck); err != nil {
+				return ErrorMsg{err}
+			}
+			// Reload decks to refresh the data
+			decks, err := a.storage.LoadAllDecks()
+			if err != nil {
+				return ErrorMsg{err}
+			}
+			return DecksLoadedMsg{decks}
+		})
+
+	case UpdateCardMsg:
+		// Update existing card
+		return a, tea.Cmd(func() tea.Msg {
+			msg.Card.MarkModified()
+			if err := a.storage.SaveDeck(msg.Deck); err != nil {
+				return ErrorMsg{err}
+			}
+			// Reload decks to refresh the data
+			decks, err := a.storage.LoadAllDecks()
+			if err != nil {
+				return ErrorMsg{err}
+			}
+			return DecksLoadedMsg{decks}
+		})
+
+	case DeleteCardMsg:
+		// Delete card
+		return a, tea.Cmd(func() tea.Msg {
+			msg.Deck.RemoveCard(msg.Card.ID)
+			if err := a.storage.SaveDeck(msg.Deck); err != nil {
+				return ErrorMsg{err}
+			}
+			// Reload decks to refresh the data
+			decks, err := a.storage.LoadAllDecks()
+			if err != nil {
+				return ErrorMsg{err}
+			}
+			return DecksLoadedMsg{decks}
+		})
 	}
 
 	// Route update to current screen
@@ -146,7 +243,21 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd = newCmd
 		}
 
-		// TODO: Handle other screens
+	case DeckManagerScreen:
+		if a.deckManager == nil {
+			a.deckManager = NewDeckManagerModel(a.decks, nil)
+			a.deckManager.SetSize(a.width, a.height)
+		}
+		newModel, newCmd := a.deckManager.Update(msg)
+		a.deckManager = newModel.(*DeckManagerModel)
+		cmd = newCmd
+
+	case CardEditorScreen:
+		if a.cardEditor != nil {
+			newModel, newCmd := a.cardEditor.Update(msg)
+			a.cardEditor = newModel.(*CardEditorModel)
+			cmd = newCmd
+		}
 	}
 
 	return a, cmd
@@ -184,7 +295,15 @@ func (a *App) View() string {
 			content = a.study.View()
 		}
 
-	// TODO: Handle other screens
+	case DeckManagerScreen:
+		if a.deckManager != nil {
+			content = a.deckManager.View()
+		}
+
+	case CardEditorScreen:
+		if a.cardEditor != nil {
+			content = a.cardEditor.View()
+		}
 	default:
 		content = "Screen not implemented yet"
 	}
@@ -218,7 +337,21 @@ func (a *App) handleNavigation(msg NavigateMsg) (tea.Model, tea.Cmd) {
 			a.study.SetSize(a.width, a.height)
 		}
 
-		// TODO: Handle other screen navigations
+	case DeckManagerScreen:
+		a.currentScreen = DeckManagerScreen
+		var editDeck *models.Deck
+		if deck, ok := msg.Data.(*models.Deck); ok {
+			editDeck = deck
+		}
+		a.deckManager = NewDeckManagerModel(a.decks, editDeck)
+		a.deckManager.SetSize(a.width, a.height)
+
+	case CardEditorScreen:
+		a.currentScreen = CardEditorScreen
+		if deck, ok := msg.Data.(*models.Deck); ok {
+			a.cardEditor = NewCardEditorModel(deck)
+			a.cardEditor.SetSize(a.width, a.height)
+		}
 	}
 
 	return a, nil
