@@ -71,29 +71,44 @@ func (m *StudyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case ShowingAnswer:
-			switch msg.String() {
-			case "1":
-				return m.rateCardAndContinue(models.Again)
-			case "2":
-				return m.rateCardAndContinue(models.Hard)
-			case "3":
-				return m.rateCardAndContinue(models.Good)
-			case "4":
-				return m.rateCardAndContinue(models.Easy)
-			case "left", "h":
-				if m.selectedRating > 0 {
-					m.selectedRating--
+			if m.session.Mode == models.PracticeMode {
+				// In practice mode, any key (except esc) advances to next card without rating
+				switch msg.String() {
+				case "esc":
+					// Return to deck list
+					return m, func() tea.Msg {
+						return NavigateMsg{Screen: DeckListScreen}
+					}
+				default:
+					// Skip rating, just move to next card
+					return m.continueWithoutRating()
 				}
-			case "right", "l":
-				if m.selectedRating < 3 {
-					m.selectedRating++
-				}
-			case "enter", "space":
-				return m.rateCardAndContinue(models.Rating(m.selectedRating))
-			case "esc":
-				// Return to deck list
-				return m, func() tea.Msg {
-					return NavigateMsg{Screen: DeckListScreen}
+			} else {
+				// Review mode - use current rating system
+				switch msg.String() {
+				case "1":
+					return m.rateCardAndContinue(models.Again)
+				case "2":
+					return m.rateCardAndContinue(models.Hard)
+				case "3":
+					return m.rateCardAndContinue(models.Good)
+				case "4":
+					return m.rateCardAndContinue(models.Easy)
+				case "left", "h":
+					if m.selectedRating > 0 {
+						m.selectedRating--
+					}
+				case "right", "l":
+					if m.selectedRating < 3 {
+						m.selectedRating++
+					}
+				case "enter", "space":
+					return m.rateCardAndContinue(models.Rating(m.selectedRating))
+				case "esc":
+					// Return to deck list
+					return m, func() tea.Msg {
+						return NavigateMsg{Screen: DeckListScreen}
+					}
 				}
 			}
 
@@ -145,6 +160,20 @@ func (m *StudyModel) rateCardAndContinue(rating models.Rating) (tea.Model, tea.C
 	return m, func() tea.Msg {
 		return SaveDeckMsg{m.deck}
 	}
+}
+
+// continueWithoutRating moves to the next card without rating (for practice mode)
+func (m *StudyModel) continueWithoutRating() (tea.Model, tea.Cmd) {
+	// Move to next card without updating spaced repetition data
+	if m.session.NextCard() {
+		m.state = ShowingQuestion
+		m.selectedRating = 2 // Reset to default (though not used in practice mode)
+	} else {
+		m.state = SessionComplete
+	}
+
+	// No need to save deck since no SRS data changed in practice mode
+	return m, nil
 }
 
 // View implements tea.Model
@@ -222,8 +251,16 @@ func (m *StudyModel) viewQuestion() string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 }
 
-// viewAnswer renders the answer side of the card with rating options
+// viewAnswer routes to the appropriate answer view based on study mode
 func (m *StudyModel) viewAnswer() string {
+	if m.session.Mode == models.PracticeMode {
+		return m.viewAnswerPractice()
+	}
+	return m.viewAnswerReview()
+}
+
+// viewAnswerReview renders the answer side of the card with rating options (review mode)
+func (m *StudyModel) viewAnswerReview() string {
 	currentCard := m.session.GetCurrentCard()
 	if currentCard == nil {
 		return "No card to display"
@@ -314,6 +351,86 @@ func (m *StudyModel) viewAnswer() string {
 		deckName,
 		cardContent,
 		ratingRow,
+		instructions,
+	)
+
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
+}
+
+// viewAnswerPractice renders the answer side for practice mode (no rating)
+func (m *StudyModel) viewAnswerPractice() string {
+	currentCard := m.session.GetCurrentCard()
+	if currentCard == nil {
+		return "No card to display"
+	}
+
+	// Progress indicator
+	current, total := m.session.GetProgress()
+	progressText := fmt.Sprintf("Card %d of %d", current, total)
+	progress := lipgloss.NewStyle().
+		Foreground(mutedColor).
+		Align(lipgloss.Center).
+		Render(progressText)
+
+	// Deck name
+	deckName := lipgloss.NewStyle().
+		Foreground(primaryColor).
+		Bold(true).
+		Align(lipgloss.Center).
+		PaddingBottom(1).
+		Render(m.session.DeckName + " - Practice Mode")
+
+	// Card content (question and answer)
+	questionText := lipgloss.NewStyle().
+		Foreground(mutedColor).
+		Bold(true).
+		Render("Q: " + currentCard.Front)
+
+	answerText := lipgloss.NewStyle().
+		Foreground(textColor).
+		Bold(true).
+		PaddingTop(1).
+		Render("A: " + currentCard.Back)
+
+	cardContent := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(secondaryColor).
+		PaddingLeft(4).
+		PaddingRight(4).
+		PaddingTop(2).
+		PaddingBottom(2).
+		Width(60).
+		Height(8).
+		Align(lipgloss.Center).
+		Render(lipgloss.JoinVertical(lipgloss.Left, questionText, answerText))
+
+	// Simple continue instruction (no rating buttons)
+	continueButton := lipgloss.NewStyle().
+		Background(primaryColor).
+		Foreground(backgroundColor).
+		Bold(true).
+		PaddingLeft(4).
+		PaddingRight(4).
+		PaddingTop(1).
+		PaddingBottom(1).
+		Margin(1, 0).
+		Render("Press any key to continue")
+
+	// Instructions
+	instructions := lipgloss.NewStyle().
+		Foreground(mutedColor).
+		Italic(true).
+		Align(lipgloss.Center).
+		PaddingTop(1).
+		Render("Any key: next card • Esc: exit")
+
+	// Combine elements
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		progress,
+		deckName,
+		cardContent,
+		continueButton,
 		instructions,
 	)
 
