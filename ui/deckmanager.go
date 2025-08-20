@@ -311,8 +311,7 @@ func (m *DeckManagerModel) viewMenu() string {
 
 			if i == m.selectedDeck {
 				itemStyle = itemStyle.
-					BorderForeground(primaryColor).
-					Background(lipgloss.Color("#374151"))
+					BorderForeground(primaryColor)
 			}
 
 			deckContent := lipgloss.JoinVertical(

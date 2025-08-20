@@ -296,8 +296,7 @@ func (m *CardEditorModel) viewList() string {
 
 			if i == m.selectedCard {
 				itemStyle = itemStyle.
-					BorderForeground(secondaryColor).
-					Background(lipgloss.Color("#374151"))
+					BorderForeground(secondaryColor)
 			}
 
 			cardContent := lipgloss.JoinVertical(

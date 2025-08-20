@@ -206,8 +206,7 @@ func (m *DeckListModel) viewDeckSelection() string {
 
 			if i == m.selected {
 				itemStyle = itemStyle.
-					BorderForeground(primaryColor).
-					Background(lipgloss.Color("#374151"))
+					BorderForeground(primaryColor)
 			}
 
 			deckContent := lipgloss.JoinVertical(
@@ -286,8 +285,7 @@ func (m *DeckListModel) viewModeSelection() string {
 
 		if i == m.selectedMode {
 			itemStyle = itemStyle.
-				BorderForeground(secondaryColor).
-				Background(lipgloss.Color("#374151"))
+				BorderForeground(secondaryColor)
 		}
 
 		modeContent := lipgloss.JoinVertical(
