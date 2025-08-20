@@ -42,6 +42,17 @@ func (m *DeckListModel) SetSize(width, height int) {
 	m.height = height
 }
 
+// UpdateDecks updates the deck list with fresh data
+func (m *DeckListModel) UpdateDecks(decks []*models.Deck) {
+	m.decks = decks
+	// Adjust selected index if it's out of bounds
+	if m.selected >= len(m.decks) && len(m.decks) > 0 {
+		m.selected = len(m.decks) - 1
+	} else if len(m.decks) == 0 {
+		m.selected = 0
+	}
+}
+
 // Init implements tea.Model
 func (m *DeckListModel) Init() tea.Cmd {
 	return nil

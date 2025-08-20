@@ -110,6 +110,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.decks = msg.Decks
 		a.errorMessage = ""
 
+		// Update any existing screen models with fresh data
+		if a.deckList != nil {
+			a.deckList.UpdateDecks(msg.Decks)
+		}
+		if a.deckManager != nil {
+			// DeckManager already handles DecksLoadedMsg in its own Update method
+			newModel, _ := a.deckManager.Update(msg)
+			a.deckManager = newModel.(*DeckManagerModel)
+		}
+
 	case ErrorMsg:
 		a.errorMessage = msg.Error.Error()
 
