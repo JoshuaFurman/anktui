@@ -207,9 +207,14 @@ func (a *App) handleNavigation(msg NavigateMsg) (tea.Model, tea.Cmd) {
 
 	case StudyScreen:
 		a.currentScreen = StudyScreen
-		if deck, ok := msg.Data.(*models.Deck); ok {
+		if req, ok := msg.Data.(*StudyRequest); ok {
+			a.currentDeck = req.Deck
+			a.study = NewStudyModel(req.Deck, a.config.StudySession.CardsPerSession, req.Mode)
+			a.study.SetSize(a.width, a.height)
+		} else if deck, ok := msg.Data.(*models.Deck); ok {
+			// Backward compatibility - default to ReviewMode
 			a.currentDeck = deck
-			a.study = NewStudyModel(deck, a.config.StudySession.CardsPerSession)
+			a.study = NewStudyModel(deck, a.config.StudySession.CardsPerSession, models.ReviewMode)
 			a.study.SetSize(a.width, a.height)
 		}
 
@@ -231,4 +236,10 @@ type ErrorMsg struct {
 type NavigateMsg struct {
 	Screen Screen
 	Data   interface{}
+}
+
+// StudyRequest contains deck and study mode for starting study sessions
+type StudyRequest struct {
+	Deck *models.Deck
+	Mode models.StudyMode
 }

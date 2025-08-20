@@ -4,6 +4,14 @@ import (
 	"time"
 )
 
+// StudyMode represents the type of study session
+type StudyMode int
+
+const (
+	ReviewMode   StudyMode = iota // Only cards due for review
+	PracticeMode                  // All cards regardless of due date
+)
+
 // StudySession represents an active study session for a deck
 type StudySession struct {
 	DeckID        string    `json:"deck_id"`
@@ -13,6 +21,7 @@ type StudySession struct {
 	ShowingAnswer bool      `json:"showing_answer"`
 	SessionStart  time.Time `json:"session_start"`
 	CardsStudied  int       `json:"cards_studied"`
+	Mode          StudyMode `json:"mode"`
 }
 
 // Rating represents how well the user knew a card
@@ -42,22 +51,32 @@ func (r Rating) String() string {
 }
 
 // NewStudySession creates a new study session for the given deck
-func NewStudySession(deck *Deck, maxCards int) *StudySession {
-	reviewCards := deck.GetReviewCards()
-	newCards := deck.GetNewCards()
-
-	// Combine review and new cards, prioritizing review cards
+func NewStudySession(deck *Deck, maxCards int, mode StudyMode) *StudySession {
 	var sessionCards []Card
-	sessionCards = append(sessionCards, reviewCards...)
 
-	// Add new cards up to the limit
-	remainingSlots := maxCards - len(reviewCards)
-	if remainingSlots > 0 && len(newCards) > 0 {
-		newCardsToAdd := remainingSlots
-		if newCardsToAdd > len(newCards) {
-			newCardsToAdd = len(newCards)
+	switch mode {
+	case ReviewMode:
+		// Only cards due for review + new cards
+		reviewCards := deck.GetReviewCards()
+		newCards := deck.GetNewCards()
+
+		// Combine review and new cards, prioritizing review cards
+		sessionCards = append(sessionCards, reviewCards...)
+
+		// Add new cards up to the limit
+		remainingSlots := maxCards - len(reviewCards)
+		if remainingSlots > 0 && len(newCards) > 0 {
+			newCardsToAdd := remainingSlots
+			if newCardsToAdd > len(newCards) {
+				newCardsToAdd = len(newCards)
+			}
+			sessionCards = append(sessionCards, newCards[:newCardsToAdd]...)
 		}
-		sessionCards = append(sessionCards, newCards[:newCardsToAdd]...)
+
+	case PracticeMode:
+		// All cards in the deck
+		sessionCards = make([]Card, len(deck.Cards))
+		copy(sessionCards, deck.Cards)
 	}
 
 	// Limit total cards to maxCards
@@ -73,6 +92,7 @@ func NewStudySession(deck *Deck, maxCards int) *StudySession {
 		ShowingAnswer: false,
 		SessionStart:  time.Now(),
 		CardsStudied:  0,
+		Mode:          mode,
 	}
 }
 

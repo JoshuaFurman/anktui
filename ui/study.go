@@ -30,8 +30,8 @@ type StudyModel struct {
 }
 
 // NewStudyModel creates a new study model
-func NewStudyModel(deck *models.Deck, maxCards int) *StudyModel {
-	session := models.NewStudySession(deck, maxCards)
+func NewStudyModel(deck *models.Deck, maxCards int, mode models.StudyMode) *StudyModel {
+	session := models.NewStudySession(deck, maxCards, mode)
 	return &StudyModel{
 		session:        session,
 		deck:           deck,
@@ -58,7 +58,7 @@ func (m *StudyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.state {
 		case ShowingQuestion:
 			switch msg.String() {
-			case "space", "enter", "f":
+			case " ", "enter", "f":
 				// Flip card to show answer
 				m.session.ShowAnswer()
 				m.state = ShowingAnswer
@@ -106,7 +106,7 @@ func (m *StudyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "r":
 				// Restart session
-				m.session = models.NewStudySession(m.deck, 20)
+				m.session = models.NewStudySession(m.deck, 20, m.session.Mode)
 				m.state = ShowingQuestion
 				return m, nil
 			}
