@@ -1,0 +1,81 @@
+{
+  "id": "4afd8792-d578-43cd-b88f-331cd6e642ac",
+  "name": "Spanish Vocabulary",
+  "description": "Basic Spanish words and phrases",
+  "cards": [
+    {
+      "id": "4b0cae1f-57dd-4ad7-aa2b-550062dbcd81",
+      "front": "Hello",
+      "back": "Hola",
+      "created": "2025-08-19T12:41:54.124010264-06:00",
+      "modified": "2025-08-19T12:51:42.974108052-06:00",
+      "interval": 4,
+      "repetition": 1,
+      "ease_factor": 2.6,
+      "next_review": "2025-08-23T12:51:42.974107882-06:00",
+      "last_review": "2025-08-19T12:51:42.974107882-06:00"
+    },
+    {
+      "id": "07f9764a-ef16-41c0-97d4-bf0063201be2",
+      "front": "Goodbye",
+      "back": "Adiós",
+      "created": "2025-08-19T12:41:54.124015313-06:00",
+      "modified": "2025-08-19T12:51:44.577061705-06:00",
+      "interval": 4,
+      "repetition": 1,
+      "ease_factor": 2.6,
+      "next_review": "2025-08-23T12:51:44.577061655-06:00",
+      "last_review": "2025-08-19T12:51:44.577061655-06:00"
+    },
+    {
+      "id": "9e4b825e-3d71-4228-bbf2-ba34687e83ba",
+      "front": "Thank you",
+      "back": "Gracias",
+      "created": "2025-08-19T12:41:54.124015564-06:00",
+      "modified": "2025-08-19T12:51:46.42809447-06:00",
+      "interval": 4,
+      "repetition": 1,
+      "ease_factor": 2.6,
+      "next_review": "2025-08-23T12:51:46.42809439-06:00",
+      "last_review": "2025-08-19T12:51:46.42809439-06:00"
+    },
+    {
+      "id": "3bd19469-2a14-47ad-aa6c-9fb7d2f6eee2",
+      "front": "Please",
+      "back": "Por favor",
+      "created": "2025-08-19T12:41:54.124015684-06:00",
+      "modified": "2025-08-19T12:51:47.557119731-06:00",
+      "interval": 4,
+      "repetition": 1,
+      "ease_factor": 2.6,
+      "next_review": "2025-08-23T12:51:47.557119651-06:00",
+      "last_review": "2025-08-19T12:51:47.557119651-06:00"
+    },
+    {
+      "id": "8d2b6407-0403-4691-add5-8329f1af703c",
+      "front": "Yes",
+      "back": "Sí",
+      "created": "2025-08-19T12:41:54.124015794-06:00",
+      "modified": "2025-08-19T12:51:48.786060891-06:00",
+      "interval": 4,
+      "repetition": 1,
+      "ease_factor": 2.6,
+      "next_review": "2025-08-23T12:51:48.786060841-06:00",
+      "last_review": "2025-08-19T12:51:48.786060841-06:00"
+    },
+    {
+      "id": "d1dd181c-6001-4cbc-852b-a6d63dd6a938",
+      "front": "No",
+      "back": "No",
+      "created": "2025-08-19T12:41:54.124015904-06:00",
+      "modified": "2025-08-19T12:51:49.792964364-06:00",
+      "interval": 4,
+      "repetition": 1,
+      "ease_factor": 2.6,
+      "next_review": "2025-08-23T12:51:49.792964314-06:00",
+      "last_review": "2025-08-19T12:51:49.792964314-06:00"
+    }
+  ],
+  "created": "2025-08-19T12:41:54.12398698-06:00",
+  "modified": "2025-08-19T12:51:49.792965456-06:00"
+}
