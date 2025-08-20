@@ -70,6 +70,36 @@ func (m *CardEditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case CardDeleteConfirm:
 			return m.updateDelete(msg)
 		}
+	case DecksLoadedMsg:
+		// Update deck data with fresh information
+		for _, deck := range msg.Decks {
+			if deck.ID == m.deck.ID {
+				m.deck = deck
+				break
+			}
+		}
+
+		// If we were creating or editing a card, return to list view
+		if m.state == CardForm {
+			m.state = CardListView
+			m.frontInput = ""
+			m.backInput = ""
+			m.currentField = 0
+			m.editingCard = nil
+			m.isNewCard = false
+		}
+
+		// If we were deleting, also return to list view
+		if m.state == CardDeleteConfirm {
+			m.state = CardListView
+			m.confirmingDelete = false
+			// Adjust selected card if it was deleted
+			if m.selectedCard >= len(m.deck.Cards) && len(m.deck.Cards) > 0 {
+				m.selectedCard = len(m.deck.Cards) - 1
+			} else if len(m.deck.Cards) == 0 {
+				m.selectedCard = 0
+			}
+		}
 	}
 
 	return m, nil

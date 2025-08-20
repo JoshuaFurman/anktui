@@ -83,6 +83,31 @@ func (m *DeckManagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case DeletingDeck:
 			return m.updateDelete(msg)
 		}
+	case DecksLoadedMsg:
+		// Handle successful deck operations
+		m.decks = msg.Decks
+
+		// If we were creating or editing a deck, return to menu
+		if m.state == CreatingDeck || m.state == EditingDeck {
+			m.state = DeckManagerMenu
+			m.nameInput = ""
+			m.descriptionInput = ""
+			m.currentField = 0
+			m.editingDeck = nil
+			m.isNewDeck = false
+		}
+
+		// If we were deleting, also return to menu
+		if m.state == DeletingDeck {
+			m.state = DeckManagerMenu
+			m.confirmingDelete = false
+			// Adjust selected deck if it was deleted
+			if m.selectedDeck >= len(m.decks) && len(m.decks) > 0 {
+				m.selectedDeck = len(m.decks) - 1
+			} else if len(m.decks) == 0 {
+				m.selectedDeck = 0
+			}
+		}
 	}
 
 	return m, nil
