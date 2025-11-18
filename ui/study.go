@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -288,11 +289,13 @@ func (m *StudyModel) viewAnswerReview() string {
 		Bold(true).
 		Render("Q: " + currentCard.Front)
 
+	// Render the answer as markdown
+	renderedAnswer := m.renderMarkdown(currentCard.Back, 50)
 	answerText := lipgloss.NewStyle().
 		Foreground(textColor).
 		Bold(true).
 		PaddingTop(1).
-		Render("A: " + currentCard.Back)
+		Render("A: " + renderedAnswer)
 
 	cardContent := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -386,11 +389,13 @@ func (m *StudyModel) viewAnswerPractice() string {
 		Bold(true).
 		Render("Q: " + currentCard.Front)
 
+	// Render the answer as markdown
+	renderedAnswer := m.renderMarkdown(currentCard.Back, 50)
 	answerText := lipgloss.NewStyle().
 		Foreground(textColor).
 		Bold(true).
 		PaddingTop(1).
-		Render("A: " + currentCard.Back)
+		Render("A: " + renderedAnswer)
 
 	cardContent := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -474,6 +479,25 @@ func (m *StudyModel) viewSessionComplete() string {
 	)
 
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
+}
+
+// renderMarkdown renders markdown text to styled text, falls back to plain text on error
+func (m *StudyModel) renderMarkdown(text string, width int) string {
+	// Try to render as markdown
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithWordWrap(width),
+		glamour.WithStylePath("dark"), // Use dark theme
+	)
+	if err == nil {
+		rendered, err := renderer.Render(text)
+		if err == nil {
+			// Remove trailing newlines that glamour adds
+			return strings.TrimRight(rendered, "\n")
+		}
+	}
+
+	// Fallback to plain text wrapping if markdown rendering fails
+	return m.wrapText(text, width)
 }
 
 // wrapText wraps text to the specified width

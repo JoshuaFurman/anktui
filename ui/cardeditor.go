@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -27,9 +28,9 @@ type CardEditorModel struct {
 	isNewCard    bool
 
 	// Form fields
-	frontInput   string
-	backInput    string
-	currentField int
+	frontTextarea textarea.Model
+	backTextarea  textarea.Model
+	currentField  int
 
 	// Confirmation
 	confirmingDelete bool
@@ -40,10 +41,24 @@ type CardEditorModel struct {
 
 // NewCardEditorModel creates a new card editor model
 func NewCardEditorModel(deck *models.Deck) *CardEditorModel {
+	// Initialize textarea models
+	frontTA := textarea.New()
+	frontTA.Placeholder = "Enter the front of the card (question)..."
+	frontTA.SetWidth(60)
+	frontTA.SetHeight(3)
+	frontTA.Focus()
+
+	backTA := textarea.New()
+	backTA.Placeholder = "Enter the back of the card (answer) - supports markdown..."
+	backTA.SetWidth(60)
+	backTA.SetHeight(3)
+
 	return &CardEditorModel{
-		deck:         deck,
-		state:        CardListView,
-		selectedCard: 0,
+		deck:          deck,
+		state:         CardListView,
+		selectedCard:  0,
+		frontTextarea: frontTA,
+		backTextarea:  backTA,
 	}
 }
 
@@ -82,8 +97,10 @@ func (m *CardEditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// If we were creating or editing a card, return to list view
 		if m.state == CardForm {
 			m.state = CardListView
-			m.frontInput = ""
-			m.backInput = ""
+			m.frontTextarea.SetValue("")
+			m.backTextarea.SetValue("")
+			m.frontTextarea.Focus()
+			m.backTextarea.Blur()
 			m.currentField = 0
 			m.editingCard = nil
 			m.isNewCard = false
@@ -120,8 +137,10 @@ func (m *CardEditorModel) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Create new card
 		m.state = CardForm
 		m.editingCard = &models.Card{}
-		m.frontInput = ""
-		m.backInput = ""
+		m.frontTextarea.SetValue("")
+		m.backTextarea.SetValue("")
+		m.frontTextarea.Focus()
+		m.backTextarea.Blur()
 		m.currentField = 0
 		m.isNewCard = true
 	case "e", "enter":
@@ -130,8 +149,10 @@ func (m *CardEditorModel) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			selectedCard := &m.deck.Cards[m.selectedCard]
 			m.state = CardForm
 			m.editingCard = selectedCard
-			m.frontInput = selectedCard.Front
-			m.backInput = selectedCard.Back
+			m.frontTextarea.SetValue(selectedCard.Front)
+			m.backTextarea.SetValue(selectedCard.Back)
+			m.frontTextarea.Focus()
+			m.backTextarea.Blur()
 			m.currentField = 0
 			m.isNewCard = false
 		}
@@ -151,23 +172,32 @@ func (m *CardEditorModel) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // updateForm handles card creation/editing form
 func (m *CardEditorModel) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
 	switch msg.String() {
-	case "tab", "down":
+	case "tab":
 		if m.currentField < 1 {
 			m.currentField++
+			m.frontTextarea.Blur()
+			m.backTextarea.Focus()
 		}
-	case "shift+tab", "up":
+	case "shift+tab":
 		if m.currentField > 0 {
 			m.currentField--
+			m.backTextarea.Blur()
+			m.frontTextarea.Focus()
 		}
-	case "enter":
+	case "ctrl+s":
 		// Save card
-		if m.frontInput == "" || m.backInput == "" {
+		frontValue := strings.TrimSpace(m.frontTextarea.Value())
+		backValue := strings.TrimSpace(m.backTextarea.Value())
+
+		if frontValue == "" || backValue == "" {
 			return m, nil // Don't save without both sides
 		}
 
-		m.editingCard.Front = m.frontInput
-		m.editingCard.Back = m.backInput
+		m.editingCard.Front = frontValue
+		m.editingCard.Back = backValue
 
 		if m.isNewCard {
 			// Create new card
@@ -183,30 +213,21 @@ func (m *CardEditorModel) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		// Cancel editing
 		m.state = CardListView
-	default:
-		// Handle text input
-		if m.currentField == 0 {
-			// Front field
-			if msg.String() == "backspace" {
-				if len(m.frontInput) > 0 {
-					m.frontInput = m.frontInput[:len(m.frontInput)-1]
-				}
-			} else if len(msg.Runes) > 0 {
-				m.frontInput += string(msg.Runes)
-			}
-		} else {
-			// Back field
-			if msg.String() == "backspace" {
-				if len(m.backInput) > 0 {
-					m.backInput = m.backInput[:len(m.backInput)-1]
-				}
-			} else if len(msg.Runes) > 0 {
-				m.backInput += string(msg.Runes)
-			}
-		}
+		return m, nil
 	}
 
-	return m, nil
+	// Update the active textarea
+	if m.currentField == 0 {
+		var cmd tea.Cmd
+		m.frontTextarea, cmd = m.frontTextarea.Update(msg)
+		cmds = append(cmds, cmd)
+	} else {
+		var cmd tea.Cmd
+		m.backTextarea, cmd = m.backTextarea.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	return m, tea.Batch(cmds...)
 }
 
 // updateDelete handles card deletion confirmation
@@ -376,64 +397,34 @@ func (m *CardEditorModel) viewForm() string {
 		Render(titleText)
 
 	// Front field
-	frontFieldStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(mutedColor).
-		PaddingLeft(2).
-		PaddingRight(2).
-		Width(60).
-		Height(3)
-
-	if m.currentField == 0 {
-		frontFieldStyle = frontFieldStyle.BorderForeground(primaryColor)
-	}
-
 	frontLabel := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(textColor).
 		PaddingBottom(1).
 		Render("Front (Question):")
 
-	frontValue := m.wrapText(m.frontInput, 56)
-	if m.currentField == 0 {
-		frontValue += "█"
-	}
+	frontValue := m.frontTextarea.View()
 
 	frontField := lipgloss.JoinVertical(
 		lipgloss.Left,
 		frontLabel,
-		frontFieldStyle.Render(frontValue),
+		frontValue,
 	)
 
 	// Back field
-	backFieldStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(mutedColor).
-		PaddingLeft(2).
-		PaddingRight(2).
-		Width(60).
-		Height(3)
-
-	if m.currentField == 1 {
-		backFieldStyle = backFieldStyle.BorderForeground(primaryColor)
-	}
-
 	backLabel := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(textColor).
 		PaddingBottom(1).
 		PaddingTop(2).
-		Render("Back (Answer):")
+		Render("Back (Answer - supports markdown):")
 
-	backValue := m.wrapText(m.backInput, 56)
-	if m.currentField == 1 {
-		backValue += "█"
-	}
+	backValue := m.backTextarea.View()
 
 	backField := lipgloss.JoinVertical(
 		lipgloss.Left,
 		backLabel,
-		backFieldStyle.Render(backValue),
+		backValue,
 	)
 
 	// Help text
@@ -442,7 +433,7 @@ func (m *CardEditorModel) viewForm() string {
 		Italic(true).
 		Align(lipgloss.Center).
 		PaddingTop(3).
-		Render("Tab/↑↓: switch fields • Enter: save • Esc: cancel")
+		Render("Tab: switch fields • Ctrl+S: save • Esc: cancel • Arrow keys: navigate text")
 
 	// Combine all elements
 	form := lipgloss.JoinVertical(
